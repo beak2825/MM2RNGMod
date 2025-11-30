@@ -1,0 +1,13 @@
+@sdk
+nvnBootstrapLoader
+_ZN2nn3hid13GetNpadStatesEPNS0_16NpadFullKeyStateEiRKj
+_ZN2nn2fs19MountSdCardForDebugEPKc
+_ZN2nn2fs8OpenFileEPNS0_10FileHandleEPKci
+_ZN2nn2fs8ReadFileEPmNS0_10FileHandleElPvm
+_ZN2nn2fs9CloseFileENS0_10FileHandleE
+_ZN2nn2os15InitializeMutexEPNS0_9MutexTypeEbi
+_ZN2nn2os9LockMutexEPNS0_9MutexTypeE
+_ZN2nn2os11UnlockMutexEPNS0_9MutexTypeE
+@game:303
+rand_get32 = 0x29a150
+rand_init = 0x29a0b0
