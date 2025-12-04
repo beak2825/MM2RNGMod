@@ -9,33 +9,37 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    container: devkitpro/devkita64:latest  # Pulls & runs everything in Docker
+    container: devkitpro/devkita64:latest  # Official Switch ARM64 image (Debian-based)
 
     steps:
-    - name: Install Python deps
+    - name: Install Python deps in venv
       run: |
         apt update
-        apt install -y python3-pip
-        pip3 install pyelftools mmh lz4
+        apt install -y python3-venv  # Ensure venv support
+        python3 -m venv /tmp/venv
+        . /tmp/venv/bin/activate
+        pip install pyelftools mmh lz4  # Install in isolated env
 
-    - name: Checkout repository (in container)
+    - name: Checkout repository
       uses: actions/checkout@v4
       with:
         submodules: recursive
 
-    - name: Verify tools
+    - name: Verify tools (pre-installed in image)
       run: |
         clang --version
         ninja --version
         cmake --version
-        echo $DEVKITPRO  # Should be /opt/devkitpro
-        echo $DEVKITA64  # Should be /opt/devkitpro/devkitA64
+        echo "DEVKITPRO: $DEVKITPRO"  # /opt/devkitpro
+        echo "DEVKITA64: $DEVKITA64"  # /opt/devkitpro/devkitA64
+        ls $DEVKITA64/bin/ | grep clang  # Confirm ARM64 Clang
 
     - name: Run LibHakkun setup
       run: |
+        . /tmp/venv/bin/activate  # Activate venv for python
         cd sys/tools
-        python3 setup_libcxx_prepackaged.py
-        python3 setup_sail.py
+        python setup_libcxx_prepackaged.py
+        python setup_sail.py
 
     - name: Configure CMake
       run: |
@@ -57,3 +61,4 @@ jobs:
           build/*.pchtxt
           build/exefs/**
         retention-days: 30
+        if-no-files-found: warn  # Still upload empty for debug
