@@ -40,7 +40,7 @@ jobs:
         # Load devkitPro env vars
         source /opt/devkitpro/corevars.sh
 
-    - name: Debug: List available libc++ packages and verify install
+    - name: Debug List available libc++ packages and verify install
       run: |
         sudo dkp-pacman -Ss libcxx  # Should show no separate package
         ls $DEVKITA64/aarch64-none-elf/include/c++  # Should show v1/ with libc++ headers
