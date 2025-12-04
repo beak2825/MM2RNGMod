@@ -1,0 +1,52 @@
+name: Build MM2RNGMod (Switch)
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive  # Pulls LibHakkun if submoduled
+
+    - name: Install dependencies
+      run: |
+        sudo apt update
+        sudo apt install -y python3-pip git curl
+        pip3 install pyelftools mmh lz4  # LibHakkun reqs
+
+    - name: Set up devkitPro
+      uses: devkitPro-actions/setup-switch-sdk@v1  # Official action for Switch toolchain
+
+    - name: Set up LibHakkun stdlib
+      run: |
+        cd sys/tools  # Adjust if path differs
+        python3 setup_libcxx_prepackaged.py  # Or full setup_libcxx.py if needed
+        python3 setup_sail.py
+
+    - name: Configure CMake
+      run: |
+        mkdir build
+        cd build
+        cmake .. -DCMAKE_BUILD_TYPE=Release -GNinja -DCMAKE_TOOLCHAIN_FILE=../sys/cmake/toolchain.cmake
+
+    - name: Build
+      run: |
+        cd build
+        ninja
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: MM2RNGMod-build
+        path: |
+          build/*.nsp
+          build/exefs/**  # Or wherever your outputs are (check project README)
+        retention-days: 30
