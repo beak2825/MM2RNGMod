@@ -14,25 +14,39 @@ jobs:
     - name: Checkout repo
       uses: actions/checkout@v4
       with:
-        submodules: recursive  # Pulls LibHakkun if submoduled
+        submodules: recursive
+        fetch-depth: 0
 
-    - name: Install dependencies
+    - name: Install base dependencies
       run: |
         sudo apt update
-        sudo apt install -y python3-pip git curl
-        pip3 install pyelftools mmh lz4  # LibHakkun reqs
+        sudo apt install -y python3-pip git wget curl sudo
+        pip3 install pyelftools mmh lz4  # LibHakkun requirements
 
-    - name: Set up devkitPro
+    - name: Set up devkitPro pacman
       run: |
-        curl -L https://github.com/devkitPro/buildscripts/releases/download/2024-07-09-1/devkitpro-pacman-installer.sh | sh -s -- -y switch-dev libnx switch-cmake switch-clang switch-libcxx switch-musl-c
+        wget https://apt.devkitpro.org/install-devkitpro-pacman
+        chmod +x install-devkitpro-pacman
+        sudo ./install-devkitpro-pacman
+        sudo dkp-pacman -Syu --noconfirm  # Sync and update pacman
+
+    - name: Install Switch toolchain packages
+      run: |
+        sudo dkp-pacman -S --needed --noconfirm switch-dev libnx switch-cmake switch-clang switch-libcxx switch-musl-c switch-tools
+        # Set environment variables
         echo "DEVKITPRO=/opt/devkitpro" >> $GITHUB_ENV
+        echo "/opt/devkitpro/tools/bin" >> $GITHUB_PATH
         echo "/opt/devkitpro/devkitA64/bin" >> $GITHUB_PATH
+        source /etc/profile.d/devkit-env.sh  # Load vars (may need for current session)
 
-    - name: Set up LibHakkun stdlib
+    - name: Clone and set up LibHakkun
       run: |
-        cd sys/tools  # Adjust if path differs
-        python3 setup_libcxx_prepackaged.py  # Or full setup_libcxx.py if needed
-        python3 setup_sail.py
+        git clone https://github.com/fruityloops1/LibHakkun.git
+        cd LibHakkun
+        python3 tools/setup_libcxx_prepackaged.py
+        python3 tools/setup_sail.py
+        # Symlink if needed for MM2RNGMod paths
+        ln -s $(pwd)/sys ../sys
 
     - name: Configure CMake
       run: |
@@ -51,5 +65,7 @@ jobs:
         name: MM2RNGMod-build
         path: |
           build/*.nsp
-          build/exefs/**  # Or wherever your outputs are (check project README)
+          build/exefs/**
+          build/*.ips
+          build/*.pchtxt  # Common mod formats
         retention-days: 30
