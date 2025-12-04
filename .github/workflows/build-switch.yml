@@ -9,7 +9,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    container: devkitpro/devkita64:latest  # Official Switch ARM64 image (Debian-based)
+    container: devkitpro/toolchain:latest  # Official Switch ARM64 image (Debian-based)
 
     steps:
     - name: Install Python deps in venv
