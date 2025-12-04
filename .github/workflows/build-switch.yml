@@ -1,4 +1,4 @@
-name: Build MM2RNGMod (Switch Only)
+name: Build MM2RNGMod
 
 on:
   push:
@@ -9,10 +9,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
+    - uses: actions/checkout@v4
       with:
         submodules: recursive
 
@@ -20,6 +18,7 @@ jobs:
       run: |
         sudo apt update
         sudo apt install -y python3-pip wget
+        pip3 install pyelftools mmh lz4
 
     - name: Install devkitPro pacman
       run: |
@@ -27,37 +26,26 @@ jobs:
         chmod +x install-devkitpro-pacman
         sudo ./install-devkitpro-pacman
 
-    - name: Sync and install Switch toolchain (no switch-libcxx needed)
+    - name: Install Switch toolchain
       run: |
         sudo dkp-pacman -Syu --noconfirm
-        # Install core packages (devkitA64 bundles libc++)
         sudo dkp-pacman -S --needed --noconfirm devkitA64 libnx switch-cmake switch-tools
-        # Set environment variables
         echo "DEVKITPRO=/opt/devkitpro" >> $GITHUB_ENV
         echo "DEVKITA64=/opt/devkitpro/devkitA64" >> $GITHUB_ENV
         echo "/opt/devkitpro/tools/bin" >> $GITHUB_PATH
         echo "/opt/devkitpro/devkitA64/bin" >> $GITHUB_PATH
-        # Load devkitPro env vars
-        source /opt/devkitpro/devkit-env.sh
+        [ -f /etc/profile.d/devkit-env.sh ] && source /etc/profile.d/devkit-env.sh
 
-    - name: Debug List available libc++ packages and verify install
-      run: |
-        sudo dkp-pacman -Ss libcxx  # Should show no separate package
-        ls $DEVKITA64/aarch64-none-elf/include/c++  # Should show v1/ with libc++ headers
-        echo "DEVKITA64 set to: $DEVKITA64"
+    - name: Verify clang
+      run: clang --version
 
-    - name: Verify clang is available
-      run: |
-        which clang
-        clang --version
-
-    - name: Run LibHakkun setup scripts
+    - name: Run LibHakkun setup
       run: |
         cd sys/tools
         python3 setup_libcxx_prepackaged.py
         python3 setup_sail.py
 
-    - name: Configure CMake
+    - name: CMake configure
       run: |
         mkdir -p build && cd build
         cmake .. -DCMAKE_BUILD_TYPE=Release -GNinja -DCMAKE_TOOLCHAIN_FILE=../sys/cmake/toolchain.cmake
