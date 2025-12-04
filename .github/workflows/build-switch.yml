@@ -1,64 +1,55 @@
-name: Build MM2RNGMod (Switch Docker)
+name: LibHakkun Build (Switch)
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ main ]
   pull_request:
-    branches: [ main, master ]
+    branches: [ main ]
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    container: devkitpro/toolchain:latest  # Official Switch ARM64 image (Debian-based)
+    container: devkitpro/devkitarm:latest  # Official full Switch toolchain
 
     steps:
-    - name: Install Python deps in venv
-      run: |
-        apt update
-        apt install -y python3-venv python3-dev  # Dev headers fix Python.h error for mmh build
-        python3 -m venv /tmp/venv
-        . /tmp/venv/bin/activate
-        pip install pyelftools mmh lz4  # Now compiles successfully
-
-    - name: Checkout repository
+    - name: Checkout
       uses: actions/checkout@v4
       with:
         submodules: recursive
 
-    - name: Verify tools (pre-installed in image)
+    - name: Install Python deps
+      run: |
+        apt update
+        apt install -y python3-pip
+        pip3 install --break-system-packages pyelftools mmh lz4  # --break-system for Debian
+
+    - name: Verify tools
       run: |
         clang --version
         ninja --version
         cmake --version
-        echo "DEVKITPRO: $DEVKITPRO"  # /opt/devkitpro
-        echo "DEVKITA64: $DEVKITA64"  # /opt/devkitpro/devkitA64
-        ls $DEVKITA64/bin/ | grep clang  # Confirm ARM64 Clang
+        echo "DEVKITA64: $DEVKITA64"
 
-    - name: Run LibHakkun setup
+    - name: Setup LibHakkun stdlib
       run: |
-        . /tmp/venv/bin/activate  # Activate venv for python
         cd sys/tools
-        python setup_libcxx_prepackaged.py
-        python setup_sail.py
+        python3 setup_libcxx_prepackaged.py
+        python3 setup_sail.py
 
     - name: Configure CMake
       run: |
-        mkdir -p build && cd build
+        mkdir build && cd build
         cmake .. -DCMAKE_BUILD_TYPE=Release -GNinja -DCMAKE_TOOLCHAIN_FILE=../sys/cmake/toolchain.cmake
 
     - name: Build
-      run: |
-        cd build
-        ninja
+      run: cd build && ninja
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: MM2RNGMod-build
+        name: libhakkun-build
         path: |
+          build/*.nso
           build/*.nsp
-          build/*.ips
-          build/*.pchtxt
           build/exefs/**
         retention-days: 30
-        if-no-files-found: warn  # Still upload empty for debug
