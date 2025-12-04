@@ -1,4 +1,4 @@
-name: Build MM2RNGMod (Switch)
+name: Build MM2RNGMod
 
 on:
   push:
@@ -11,66 +11,61 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repo
+    - name: Checkout repository
       uses: actions/checkout@v4
       with:
         submodules: recursive
-        fetch-depth: 0
 
-    - name: Install base dependencies
+    - name: Install basic tools
       run: |
         sudo apt update
-        sudo apt install -y python3-pip git wget curl sudo
-        pip3 install pyelftools mmh lz4  # LibHakkun requirements
+        sudo apt install -y python3-pip wget
+        pip3 install pyelftools mmh lz4
 
-    - name: Set up devkitPro pacman
+    - name: Install devkitPro pacman
       run: |
         wget https://apt.devkitpro.org/install-devkitpro-pacman
         chmod +x install-devkitpro-pacman
         sudo ./install-devkitpro-pacman
-        sudo dkp-pacman -Syu --noconfirm  # Sync and update pacman
 
-    - name: Install Switch toolchain packages
+    - name: Install Switch toolchain (correct package names 2025)
       run: |
-        # Install core packages individually (avoids group prompt)
-        sudo dkp-pacman -S --needed --noconfirm devkitA64 libnx switch-cmake switch-libcxx-16 switch-tools
-        # Set environment variables
+        sudo dkp-pacman -Syu --noconfirm
+        sudo dkp-pacman -S --needed --noconfirm \
+          devkitA64 libnx switch-cmake switch-libcxx switch-tools
+
         echo "DEVKITPRO=/opt/devkitpro" >> $GITHUB_ENV
-        echo "$DEVKITPRO/tools/bin" >> $GITHUB_PATH
-        echo "$DEVKITPRO/devkitA64/bin" >> $GITHUB_PATH
-        # Load env
-        source "$DEVKITPRO/corevars.sh"
-        # Debug: Verify installs
-        which clang || echo "Clang not in PATH"
-        clang --version || echo "Clang version check failed"
+        echo "/opt/devkitpro/tools/bin" >> $GITHUB_PATH
+        echo "/opt/devkitpro/devkitA64/bin" >> $GITHUB_PATH
 
-    - name: Clone and set up LibHakkun
+    - name: Verify clang is available
       run: |
-        git clone https://github.com/fruityloops1/LibHakkun.git
-        cd LibHakkun
-        python3 tools/setup_libcxx_prepackaged.py
-        python3 tools/setup_sail.py
-        # Symlink sys to MM2RNGMod root for toolchain access
-        ln -sf $(pwd)/sys ..
+        which clang
+        clang --version
+
+    - name: Run LibHakkun setup scripts (already in sys/ because of submodule)
+      run: |
+        cd sys/tools
+        python3 setup_libcxx_prepackaged.py
+        python3 setup_sail.py
 
     - name: Configure CMake
       run: |
-        mkdir build
-        cd build
-        cmake .. -DCMAKE_BUILD_TYPE=Release -GNinja -DCMAKE_TOOLCHAIN_FILE=../sys/cmake/toolchain.cmake
+        mkdir -p build && cd build
+        cmake .. -DCMAKE_BUILD_TYPE=Release -GNinja
 
     - name: Build
       run: |
         cd build
         ninja
 
-    - name: Upload artifacts
+    - name: Upload build artifacts
       uses: actions/upload-artifact@v4
       with:
         name: MM2RNGMod-build
         path: |
           build/*.nsp
-          build/exefs/**
           build/*.ips
           build/*.pchtxt
+          build/exefs/**
         retention-days: 30
