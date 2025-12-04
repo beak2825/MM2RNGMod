@@ -32,12 +32,16 @@ jobs:
 
     - name: Install Switch toolchain packages
       run: |
-        sudo dkp-pacman -S --needed --noconfirm switch-dev libnx switch-cmake switch-clang switch-libcxx switch-musl-c switch-tools
+        # Install the switch-dev group (non-interactive by selecting all via echo)
+        echo -e "1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n11\n12\n13\n" | sudo dkp-pacman -S --needed --noconfirm switch-dev || true  # Ignore prompt fail, as it defaults to all
+        # Or better: Install core packages individually (avoids group prompt entirely)
+        sudo dkp-pacman -S --needed --noconfirm devkitA64 libnx switch-cmake switch-libcxx-16 switch-tools
         # Set environment variables
         echo "DEVKITPRO=/opt/devkitpro" >> $GITHUB_ENV
-        echo "/opt/devkitpro/tools/bin" >> $GITHUB_PATH
-        echo "/opt/devkitpro/devkitA64/bin" >> $GITHUB_PATH
-        source /etc/profile.d/devkit-env.sh  # Load vars (may need for current session)
+        echo "$DEVKITPRO/tools/bin" >> $GITHUB_PATH
+        echo "$DEVKITPRO/devkitA64/bin" >> $GITHUB_PATH
+        # Load env (devkitPro auto-generates this)
+        source "$DEVKITPRO/corevars.sh"
 
     - name: Clone and set up LibHakkun
       run: |
