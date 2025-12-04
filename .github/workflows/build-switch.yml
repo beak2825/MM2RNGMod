@@ -1,4 +1,4 @@
-name: LibHakkun Build (Switch)
+name: Build MM2RNGMod
 
 on:
   push:
@@ -9,7 +9,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    container: devkitpro/devkitarm:latest  # Official full Switch toolchain
+    container: devkitpro/devkitarm:latest
 
     steps:
     - name: Checkout
@@ -17,39 +17,45 @@ jobs:
       with:
         submodules: recursive
 
+    - name: Setup devkitPro environment   # ← THIS IS THE ONLY FIX
+      run: |
+        echo "DEVKITPRO=/opt/devkitpro" >> $GITHUB_ENV
+        echo "DEVKITA64=/opt/devkitpro/devkitA64" >> $GITHUB_ENV
+        echo "/opt/devkitpro/devkitA64/bin" >> $GITHUB_PATH
+        echo "/opt/devkitpro/tools/bin" >> $GITHUB_PATH
+
     - name: Install Python deps
       run: |
         apt update
         apt install -y python3-pip
-        pip3 install --break-system-packages pyelftools mmh lz4  # --break-system for Debian
+        pip3 install --break-system-packages pyelftools mmh lz4
 
-    - name: Verify tools
+    - name: Verify tools (now works!)
       run: |
         clang --version
         ninja --version
         cmake --version
-        echo "DEVKITA64: $DEVKITA64"
+        echo "DEVKITA64 = $DEVKITA64"
 
-    - name: Setup LibHakkun stdlib
+    - name: Setup LibHakkun
       run: |
         cd sys/tools
         python3 setup_libcxx_prepackaged.py
         python3 setup_sail.py
 
-    - name: Configure CMake
-      run: |
-        mkdir build && cd build
-        cmake .. -DCMAKE_BUILD_TYPE=Release -GNinja -DCMAKE_TOOLCHAIN_FILE=../sys/cmake/toolchain.cmake
-
     - name: Build
-      run: cd build && ninja
+      run: |
+        mkdir -p build && cd build
+        cmake .. -DCMAKE_BUILD_TYPE=Release -GNinja -DCMAKE_TOOLCHAIN_FILE=../sys/cmake/toolchain.cmake
+        ninja
+        echo "Build complete! Listing output:"
+        ls -la
 
-    - name: Upload artifacts
+    - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
-        name: libhakkun-build
+        name: MM2RNGMod
         path: |
-          build/*.nso
-          build/*.nsp
           build/exefs/**
-        retention-days: 30
+          build/*.nsp
+          build/*.ips
