@@ -32,16 +32,17 @@ jobs:
 
     - name: Install Switch toolchain packages
       run: |
-        # Install the switch-dev group (non-interactive by selecting all via echo)
-        echo -e "1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n11\n12\n13\n" | sudo dkp-pacman -S --needed --noconfirm switch-dev || true  # Ignore prompt fail, as it defaults to all
-        # Or better: Install core packages individually (avoids group prompt entirely)
+        # Install core packages individually (avoids group prompt)
         sudo dkp-pacman -S --needed --noconfirm devkitA64 libnx switch-cmake switch-libcxx-16 switch-tools
         # Set environment variables
         echo "DEVKITPRO=/opt/devkitpro" >> $GITHUB_ENV
         echo "$DEVKITPRO/tools/bin" >> $GITHUB_PATH
         echo "$DEVKITPRO/devkitA64/bin" >> $GITHUB_PATH
-        # Load env (devkitPro auto-generates this)
+        # Load env
         source "$DEVKITPRO/corevars.sh"
+        # Debug: Verify installs
+        which clang || echo "Clang not in PATH"
+        clang --version || echo "Clang version check failed"
 
     - name: Clone and set up LibHakkun
       run: |
@@ -49,8 +50,8 @@ jobs:
         cd LibHakkun
         python3 tools/setup_libcxx_prepackaged.py
         python3 tools/setup_sail.py
-        # Symlink if needed for MM2RNGMod paths
-        ln -s $(pwd)/sys ../sys
+        # Symlink sys to MM2RNGMod root for toolchain access
+        ln -sf $(pwd)/sys ..
 
     - name: Configure CMake
       run: |
@@ -71,5 +72,5 @@ jobs:
           build/*.nsp
           build/exefs/**
           build/*.ips
-          build/*.pchtxt  # Common mod formats
+          build/*.pchtxt
         retention-days: 30
