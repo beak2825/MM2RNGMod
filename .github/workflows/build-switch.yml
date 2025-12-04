@@ -1,4 +1,4 @@
-name: Build MM2RNGMod
+name: LibHakkun Build (Switch)
 
 on:
   push:
@@ -9,51 +9,57 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    container: devkitpro/devkitarm:latest
-
-    # THIS IS THE ONLY CHANGE YOU NEED
-    env:
-      DEVKITPRO: /opt/devkitpro
-      DEVKITA64: /opt/devkitpro/devkitA64
-      DEVKITARM: /opt/devkitpro/devkitARM
 
     steps:
-    - name: Fix PATH for devkitA64 tools
-      run: |
-        echo "PATH=/opt/devkitpro/devkitA64/bin:/opt/devkitpro/tools/bin:$PATH" >> $GITHUB_ENV
-
-    - uses: actions/checkout@v4
+    - name: Checkout
+      uses: actions/checkout@v4  # Updated to v4 for reliability
       with:
         submodules: recursive
 
-    - name: Install Python dependencies
+    - name: Set up dependencies
       run: |
-        apt update
-        apt install -y python3-pip
-        pip3 install --break-system-packages pyelftools mmh lz4
+        sudo apt-get update
+        sudo apt-get install -y python3 python3-pip git wget ninja-build cmake
+        # Run LibHakkun scripts (your sys/ submodule has them)
+        python3 sys/tools/setup_libcxx_prepackaged.py
+        python3 sys/tools/setup_sail.py
+        # Install LLVM/Clang 20 for ARM64 cross-compilation
+        wget https://apt.llvm.org/llvm.sh
+        chmod +x llvm.sh
+        sudo ./llvm.sh 20
+        sudo apt-get install -y clang-20 llvm-20 lld-20
+        # Install Python deps
+        python3 -m pip install pyelftools mmh lz4
 
-    - name: Verify tools work
+    - name: Verify tools
       run: |
-        clang --version
-        aarch64-none-elf-gcc --version
+        clang-20 --version
         ninja --version
         cmake --version
-        echo "DEVKITA64 = $DEVKITA64"
-
-    - name: Setup LibHakkun
-      run: |
-        cd sys/tools
-        python3 setup_libcxx_prepackaged.py
-        python3 setup_sail.py
 
     - name: Build
       run: |
-        mkdir -p build && cd build
-        cmake .. -DCMAKE_BUILD_TYPE=Release -GNinja -DCMAKE_TOOLCHAIN_FILE=../sys/cmake/toolchain.cmake
-        ninja
+        cmake -B build \
+          -DCMAKE_BUILD_TYPE=Release \
+          -DCMAKE_C_COMPILER=clang-20 \
+          -DCMAKE_CXX_COMPILER=clang++-20 \
+          -DCMAKE_ASM_COMPILER=clang-20 \
+          -DCMAKE_EXE_LINKER_FLAGS="-fuse-ld=lld-20" \
+          -DCMAKE_MODULE_LINKER_FLAGS="-fuse-ld=lld-20" \
+          -DCMAKE_SHARED_LINKER_FLAGS="-fuse-ld=lld-20" \
+          -DCMAKE_TOOLCHAIN_FILE=sys/cmake/toolchain.cmake  # Use LibHakkun's toolchain
+        cmake --build build -j $(nproc)
+        # Debug: List outputs
+        find build -name "*.nso" -o -name "*.nsp" -o -name "exefs" | head -10 || echo "Check build/ for files"
 
-    - name: Upload artifact
+    - name: Upload Artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: MM2RNGMod-exefs
-        path: build/exefs/**
+        name: MM2RNGMod-build
+        path: |
+          build/*.nso
+          build/*.nsp
+          build/*.ips
+          build/exefs/**
+        retention-days: 30
+        if-no-files-found: warn
