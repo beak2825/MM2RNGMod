@@ -38,7 +38,7 @@ jobs:
         echo "/opt/devkitpro/tools/bin" >> $GITHUB_PATH
         echo "/opt/devkitpro/devkitA64/bin" >> $GITHUB_PATH
         # Load devkitPro env vars
-        source /opt/devkitpro/corevars.sh
+        source /opt/devkitpro/devkit-env.sh
 
     - name: Debug List available libc++ packages and verify install
       run: |
