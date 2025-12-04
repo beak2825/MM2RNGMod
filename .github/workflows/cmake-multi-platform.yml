@@ -23,7 +23,10 @@ jobs:
         pip3 install pyelftools mmh lz4  # LibHakkun reqs
 
     - name: Set up devkitPro
-      uses: devkitPro-actions/setup-switch-sdk@v1  # Official action for Switch toolchain
+      run: |
+        curl -L https://github.com/devkitPro/buildscripts/releases/download/2024-07-09-1/devkitpro-pacman-installer.sh | sh -s -- -y switch-dev libnx switch-cmake switch-clang switch-libcxx switch-musl-c
+        echo "DEVKITPRO=/opt/devkitpro" >> $GITHUB_ENV
+        echo "/opt/devkitpro/devkitA64/bin" >> $GITHUB_PATH
 
     - name: Set up LibHakkun stdlib
       run: |
