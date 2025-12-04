@@ -15,10 +15,10 @@ jobs:
     - name: Install Python deps in venv
       run: |
         apt update
-        apt install -y python3-venv  # Ensure venv support
+        apt install -y python3-venv python3-dev  # Dev headers fix Python.h error for mmh build
         python3 -m venv /tmp/venv
         . /tmp/venv/bin/activate
-        pip install pyelftools mmh lz4  # Install in isolated env
+        pip install pyelftools mmh lz4  # Now compiles successfully
 
     - name: Checkout repository
       uses: actions/checkout@v4
